@@ -82,6 +82,11 @@
   :group 'mood-line
   :type '(group symbol))
 
+(defcustom mood-line-font "SF Pro"
+  "Font in the mode-line."
+  :group 'mood-line
+  :type 'string)
+
 (defface mood-line-buffer-name
   '((t (:inherit (mode-line-buffer-id))))
   "Face used for major mode indicator in the mode-line."
@@ -130,7 +135,6 @@
 ;;
 ;; Helper functions
 ;;
-
 
 ;; Keep `doom-modeline-current-window' up-to-date
 (defun mood-line--get-current-window (&optional frame)
@@ -186,13 +190,21 @@ If FRAME is nil, it means the current frame."
 
 
 (defun mood-line--format (left right)
-  "Return a string of `window-width' length containing LEFT and RIGHT, aligned respectively."
+  "Return a string of `window-width' length containing LEFT and RIGHT,
+aligned respectively."
   (let ((reserve (length right)))
-    (concat left
-            " "
-            (propertize " "
-                        'display `((space :align-to (- right (- 0 right-margin) ,reserve))))
-            right)))
+    (set-face-attribute 'mode-line nil
+                        :family mood-line-font)
+    (set-face-attribute 'mode-line-inactive nil
+                        :family mood-line-font)
+    
+    (concat
+     (propertize " " 'display '(raise -0.4))
+     left
+     (propertize " " 'display '(height 1.6))
+     (propertize " "
+                 'display `((space :align-to (- right (- 0 right-margin) ,reserve))))
+     right)))
 
 
 (defun mood-line--make-render-list (list map)
@@ -200,11 +212,9 @@ If FRAME is nil, it means the current frame."
   (mapcar (lambda (it)
             `(:eval (,(cdr (assoc it map))))) list))
 
-
 ;;
 ;; Update functions
 ;;
-
 
 (defvar-local mood-line--vc-text nil)
 (defun mood-line--update-vc-segment (&rest _)
@@ -438,10 +448,8 @@ If FRAME is nil, it means the current frame."
                            ;;   (:eval (mood-line-widget-nyan))
                            ;;   (:eval (mood-line-segment-position))
                            ;;   (:eval (mood-line-widget-parrot)))
-                           (cons " "
-                                 (mood-line--make-render-list mood-line-left-align mood-line--segment-render-maps)))
+                           (mood-line--make-render-list mood-line-left-align mood-line--segment-render-maps))
 
-                          
                           ;; Right
                           (format-mode-line
                            ;; '((:eval (mood-line-segment-eol))
@@ -453,8 +461,7 @@ If FRAME is nil, it means the current frame."
                            ;;   (:eval (mood-line-segment-flymake))
                            ;;   (:eval (mood-line-segment-process))
                            ;;   " ")
-                           (append
-                            (mood-line--make-render-list mood-line-right-align mood-line--segment-render-maps) '(" "))))))))
+                           (mood-line--make-render-list mood-line-right-align mood-line--segment-render-maps)))))))
     
     (progn
       ;; Remove flycheck hooks
@@ -471,6 +478,7 @@ If FRAME is nil, it means the current frame."
 
       ;; Restore the original mode-line format
       (setq-default mode-line-format mood-line--default-mode-line))))
+
 
 ;;
 ;; Provide mood-line
