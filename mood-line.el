@@ -82,8 +82,18 @@
   :group 'mood-line
   :type '(group symbol))
 
-(defcustom mood-line-font "SF Pro"
+(defcustom mood-line-font "SF Pro Text"
   "Font in the mode-line."
+  :group 'mood-line
+  :type 'string)
+
+(defcustom mood-line-background nil
+  "Background color in the mode-line."
+  :group 'mood-line
+  :type 'string)
+
+(defcustom mood-line-inactive-background nil
+  "Background color in the mode-line when inactive."
   :group 'mood-line
   :type 'string)
 
@@ -194,9 +204,13 @@ If FRAME is nil, it means the current frame."
 aligned respectively."
   (let ((reserve (length right)))
     (set-face-attribute 'mode-line nil
-                        :family mood-line-font)
+                        :family mood-line-font
+                        :background (or mood-line-background (face-attribute 'mode-line :background))
+                        )
+    
     (set-face-attribute 'mode-line-inactive nil
-                        :family mood-line-font)
+                        :family mood-line-font
+                        :background (or mood-line-inactive-background (face-attribute 'mode-line-inactive :background)))
     
     (concat
      (propertize " " 'display '(raise -0.4))
@@ -215,6 +229,7 @@ aligned respectively."
 ;;
 ;; Update functions
 ;;
+
 
 (defvar-local mood-line--vc-text nil)
 (defun mood-line--update-vc-segment (&rest _)
