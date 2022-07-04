@@ -205,9 +205,7 @@ aligned respectively."
   (let ((reserve (length right)))
     (set-face-attribute 'mode-line nil
                         :family mood-line-font
-                        :background (or mood-line-background (face-attribute 'mode-line :background))
-                        )
-    
+                        :background (or mood-line-background (face-attribute 'mode-line :background)))
     (set-face-attribute 'mode-line-inactive nil
                         :family mood-line-font
                         :background (or mood-line-inactive-background (face-attribute 'mode-line-inactive :background)))
