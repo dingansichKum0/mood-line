@@ -3,7 +3,7 @@
 ;; Author: Jessie Hildebrandt <jessieh.net>
 ;; Homepage: https://gitlab.com/jessieh/mood-line
 ;; Keywords: mode-line faces
-;; Version: 1.2.4
+;; Version: 1.2.5
 ;; Package-Requires: ((emacs "25.1"))
 
 ;; This file is not part of GNU Emacs.
@@ -49,6 +49,7 @@
 
 (defvar flycheck-current-errors)
 (defvar flymake--mode-line-format)
+(defvar anzu-cons-mode-line-p)
 (defvar anzu--state)
 (defvar anzu--cached-count)
 (defvar anzu--overflow-p)
@@ -71,20 +72,15 @@
   "A minimal mode-line configuration inspired by doom-modeline."
   :group 'mode-line)
 
-(defcustom mood-line-show-eol-style nil
-  "If t, the EOL style of the current buffer will be displayed in the mode-line."
+(defcustom mood-line-left-align '(modified buffer-name anzu multiple-cursors nyan line-position parrot)
+  "The order of the modeline element, on the left."
   :group 'mood-line
-  :type 'boolean)
+  :type '(group symbol))
 
-(defcustom mood-line-show-encoding-information nil
-  "If t, the encoding format of the current buffer will be displayed in the mode-line."
+(defcustom mood-line-right-align '(encoding vc major-mode misc-info flycheck flymake process)
+  "The order of the modeline element, on the right."
   :group 'mood-line
-  :type 'boolean)
-
-(defcustom mood-line-show-cursor-point nil
-  "If t, the value of `point' will be displayed next to the cursor position in the mode-line."
-  :group 'mood-line
-  :type 'boolean)
+  :type '(group symbol))
 
 (defface mood-line-buffer-name
   '((t (:inherit (mode-line-buffer-id))))
@@ -135,11 +131,47 @@
 ;; Helper functions
 ;;
 
+
+;; Keep `doom-modeline-current-window' up-to-date
+(defun mood-line--get-current-window (&optional frame)
+  "Get the current window but should exclude the child windows.
+If FRAME is nil, it means the current frame."
+  (if (and (fboundp 'frame-parent) (frame-parent frame))
+      (frame-selected-window (frame-parent frame))
+    (frame-selected-window frame)))
+
+
+(defvar mood-line-current-window (mood-line--get-current-window)
+  "Current window.")
+
+
+(defun mood-line--active ()
+  "Whether is an active window."
+  (unless (and (bound-and-true-p mini-frame-frame)
+               (and (frame-live-p mini-frame-frame)
+                    (frame-visible-p mini-frame-frame)))
+    (and mood-line-current-window
+         (eq (mood-line--get-current-window) mood-line-current-window))))
+
+
+(defun mood-line-set-selected-window (&rest _)
+  "Set `mood-line-current-window' appropriately."
+  (let ((win (mood-line--get-current-window)))
+    (setq mood-line-current-window
+          (if (minibuffer-window-active-p win)
+              (minibuffer-selected-window)
+            win))))
+
+
+(add-hook 'pre-redisplay-functions #'mood-line-set-selected-window)
+
+
 (defun mood-line--string-trim-left (string)
   "Remove whitespace at the beginning of STRING."
   (if (string-match "\\`[ \t\n\r]+" string)
       (replace-match "" t t string)
     string))
+
 
 (defun mood-line--string-trim-right (string)
   "Remove whitespace at the end of STRING."
@@ -147,9 +179,11 @@
       (replace-match "" t t string)
     string))
 
+
 (defun mood-line--string-trim (string)
   "Remove whitespace at the beginning and end of STRING."
   (mood-line--string-trim-left (mood-line--string-trim-right string)))
+
 
 (defun mood-line--format (left right)
   "Return a string of `window-width' length containing LEFT and RIGHT, aligned respectively."
@@ -157,12 +191,20 @@
     (concat left
             " "
             (propertize " "
-                        'display `((space :align-to (- right ,reserve))))
+                        'display `((space :align-to (- right (- 0 right-margin) ,reserve))))
             right)))
+
+
+(defun mood-line--make-render-list (list map)
+  "Make render list by LIST and MAPS."
+  (mapcar (lambda (it)
+            `(:eval (,(cdr (assoc it map))))) list))
+
 
 ;;
 ;; Update functions
 ;;
+
 
 (defvar-local mood-line--vc-text nil)
 (defun mood-line--update-vc-segment (&rest _)
@@ -226,9 +268,11 @@
           "  "))
     "  "))
 
+
 (defun mood-line-segment-buffer-name ()
   "Displays the name of the current buffer in the mode-line."
   (propertize "%b  " 'face 'mood-line-buffer-name))
+
 
 (defun mood-line-segment-anzu ()
   "Displays color-coded anzu status information in the mode-line (if available)."
@@ -240,42 +284,63 @@
           (t
            (format #("%d/%d  " 0 5 (face mood-line-status-info)) anzu--current-position anzu--total-matched)))))
 
+
 (defun mood-line-segment-multiple-cursors ()
   "Displays the number of active multiple-cursors in the mode-line (if available)."
   (when (and (boundp 'multiple-cursors-mode) multiple-cursors-mode)
     (concat "MC"
             (format #("×%d  " 0 3 (face mood-line-status-warning)) (mc/num-cursors)))))
 
-(defun mood-line-segment-position ()
+
+(defun mood-line-widget-nyan ()
+  "Displays nyan-mode in the mode-line."
+  (if (and (mood-line--active) (bound-and-true-p nyan-mode)) 
+      '(:eval (nyan-create))))
+
+
+(defun mood-line-widget-parrot ()
+  "Displays parrot-mode in the mode-line."
+  (if (and (mood-line--active) (bound-and-true-p parrot-mode)) 
+      '(:eval (parrot-create))))
+
+
+(defun mood-line-segment-cursor-position ()
   "Displays the current cursor position in the mode-line."
   (concat "%l:%c"
-          (when mood-line-show-cursor-point (propertize (format ":%d" (point)) 'face 'mood-line-unimportant))
-          (propertize " %p%%  " 'face 'mood-line-unimportant)))
+          (propertize (format ":%d " (point)) 'face 'mood-line-unimportant)))
+
+
+(defun mood-line-segment-line-position ()
+  "Displays the current line position in the mode-line."
+  (propertize " %p%%  " 'face 'mood-line-unimportant))
+
 
 (defun mood-line-segment-eol ()
   "Displays the EOL style of the current buffer in the mode-line."
-  (when mood-line-show-eol-style
-    (pcase (coding-system-eol-type buffer-file-coding-system)
-      (0 "LF  ")
-      (1 "CRLF  ")
-      (2 "CR  "))))
+  (pcase (coding-system-eol-type buffer-file-coding-system)
+    (0 "LF  ")
+    (1 "CRLF  ")
+    (2 "CR  ")))
+
 
 (defun mood-line-segment-encoding ()
   "Displays the encoding and EOL style of the buffer in the mode-line."
-  (when mood-line-show-encoding-information
-    (concat (let ((sys (coding-system-plist buffer-file-coding-system)))
-              (cond ((memq (plist-get sys :category) '(coding-category-undecided coding-category-utf-8))
-                     "UTF-8")
-                    (t (upcase (symbol-name (plist-get sys :name))))))
-            "  ")))
+  (concat (let ((sys (coding-system-plist buffer-file-coding-system)))
+            (cond ((memq (plist-get sys :category) '(coding-category-undecided coding-category-utf-8))
+                   "UTF-8")
+                  (t (upcase (symbol-name (plist-get sys :name))))))
+          "  "))
+
 
 (defun mood-line-segment-vc ()
   "Displays color-coded version control information in the mode-line."
   mood-line--vc-text)
 
+
 (defun mood-line-segment-major-mode ()
   "Displays the current major mode in the mode-line."
   (concat (format-mode-line mode-name 'mood-line-major-mode) "  "))
+
 
 (defun mood-line-segment-misc-info ()
   "Displays the current value of `mode-line-misc-info' in the mode-line."
@@ -283,14 +348,21 @@
     (unless (string= (mood-line--string-trim misc-info) "")
       (concat (mood-line--string-trim misc-info) "  "))))
 
+
 (defun mood-line-segment-flycheck ()
   "Displays color-coded flycheck information in the mode-line (if available)."
   mood-line--flycheck-text)
 
+
 (defun mood-line-segment-flymake ()
   "Displays information about the current status of flymake in the mode-line (if available)."
   (when (and (boundp 'flymake-mode) flymake-mode)
-    (concat (mood-line--string-trim (format-mode-line flymake--mode-line-format)) "  ")))
+    ;; Depending on Emacs version, flymake stores the mode-line segment using one of two variable names
+    (let ((flymake-segment-format (if (boundp 'flymake-mode-line-format)
+                                      flymake-mode-line-format
+                                    flymake--mode-line-format)))
+      (concat (mood-line--string-trim (format-mode-line flymake-segment-format)) "  "))))
+
 
 (defun mood-line-segment-process ()
   "Displays the current value of `mode-line-process' in the mode-line."
@@ -298,12 +370,34 @@
     (unless (string= (mood-line--string-trim process-info) "")
       (concat (mood-line--string-trim process-info) "  "))))
 
+
 ;;
 ;; Activation function
 ;;
 
-;; Store the default mode-line format
-(defvar mood-line--default-mode-line mode-line-format)
+
+(defvar-local mood-line--default-mode-line mode-line-format)
+(defvar-local mood-line--anzu-cons-mode-line-p nil)
+
+
+(defvar mood-line--segment-render-maps '((modified . mood-line-segment-modified)
+                                         (buffer-name . mood-line-segment-buffer-name)
+                                         (anzu . mood-line-segment-anzu)
+                                         (multiple-cursors . mood-line-segment-multiple-cursors)
+                                         (nyan . mood-line-widget-nyan)
+                                         (line-position . mood-line-segment-line-position)
+                                         (cursor-position . mood-line-segment-cursor-position)
+                                         (parrot . mood-line-widget-parrot)
+                                         (eol . mood-line-segment-eol)
+                                         (encoding . mood-line-segment-encoding)
+                                         (vc . mood-line-segment-vc)
+                                         (major-mode . mood-line-segment-major-mode)
+                                         (misc-info . mood-line-segment-misc-info)
+                                         (flycheck . mood-line-segment-flycheck)
+                                         (flymake . mood-line-segment-flymake)
+                                         (process . mood-line-segment-process)))
+
+
 
 ;;;###autoload
 (define-minor-mode mood-line-mode
@@ -313,7 +407,6 @@
   :lighter nil
   (if mood-line-mode
       (progn
-
         ;; Setup flycheck hooks
         (add-hook 'flycheck-status-changed-functions #'mood-line--update-flycheck-segment)
         (add-hook 'flycheck-mode-hook #'mood-line--update-flycheck-segment)
@@ -323,32 +416,47 @@
         (add-hook 'after-save-hook #'mood-line--update-vc-segment)
         (advice-add #'vc-refresh-state :after #'mood-line--update-vc-segment)
 
+        ;; Disable anzu's mode-line segment setting, saving the previous setting to be restored later (if present)
+        (when (boundp 'anzu-cons-mode-line-p)
+          (setq mood-line--anzu-cons-mode-line-p anzu-cons-mode-line-p))
+        (setq-default anzu-cons-mode-line-p nil)
+
+        ;; Save previous mode-line-format to be restored later
+        (setq mood-line--default-mode-line mode-line-format)
+
         ;; Set the new mode-line-format
         (setq-default mode-line-format
                       '((:eval
                          (mood-line--format
                           ;; Left
                           (format-mode-line
-                           '(" "
-                             (:eval (mood-line-segment-modified))
-                             (:eval (mood-line-segment-buffer-name))
-                             (:eval (mood-line-segment-anzu))
-                             (:eval (mood-line-segment-multiple-cursors))
-                             (:eval (mood-line-segment-position))))
+                           ;; '(" "
+                           ;;   (:eval (mood-line-segment-modified))
+                           ;;   (:eval (mood-line-segment-buffer-name))
+                           ;;   (:eval (mood-line-segment-anzu))
+                           ;;   (:eval (mood-line-segment-multiple-cursors))
+                           ;;   (:eval (mood-line-widget-nyan))
+                           ;;   (:eval (mood-line-segment-position))
+                           ;;   (:eval (mood-line-widget-parrot)))
+                           (cons " "
+                                 (mood-line--make-render-list mood-line-left-align mood-line--segment-render-maps)))
 
+                          
                           ;; Right
                           (format-mode-line
-                           '((:eval (mood-line-segment-eol))
-                             (:eval (mood-line-segment-encoding))
-                             (:eval (mood-line-segment-vc))
-                             (:eval (mood-line-segment-major-mode))
-                             (:eval (mood-line-segment-misc-info))
-                             (:eval (mood-line-segment-flycheck))
-                             (:eval (mood-line-segment-flymake))
-                             (:eval (mood-line-segment-process))
-                             " ")))))))
+                           ;; '((:eval (mood-line-segment-eol))
+                           ;;   (:eval (mood-line-segment-encoding))
+                           ;;   (:eval (mood-line-segment-vc))
+                           ;;   (:eval (mood-line-segment-major-mode))
+                           ;;   (:eval (mood-line-segment-misc-info))
+                           ;;   (:eval (mood-line-segment-flycheck))
+                           ;;   (:eval (mood-line-segment-flymake))
+                           ;;   (:eval (mood-line-segment-process))
+                           ;;   " ")
+                           (append
+                            (mood-line--make-render-list mood-line-right-align mood-line--segment-render-maps) '(" "))))))))
+    
     (progn
-
       ;; Remove flycheck hooks
       (remove-hook 'flycheck-status-changed-functions #'mood-line--update-flycheck-segment)
       (remove-hook 'flycheck-mode-hook #'mood-line--update-flycheck-segment)
@@ -357,6 +465,9 @@
       (remove-hook 'file-find-hook #'mood-line--update-vc-segment)
       (remove-hook 'after-save-hook #'mood-line--update-vc-segment)
       (advice-remove #'vc-refresh-state #'mood-line--update-vc-segment)
+
+      ;; Restore anzu's mode-line segment setting
+      (setq-default anzu-cons-mode-line-p mood-line--anzu-cons-mode-line-p)
 
       ;; Restore the original mode-line format
       (setq-default mode-line-format mood-line--default-mode-line))))

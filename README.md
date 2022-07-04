@@ -1,8 +1,8 @@
 # mood-line
-### Version 1.2.4
 
-[![MELPA](https://melpa.org/packages/mood-line-badge.svg)](https://melpa.org/#/mood-line)
-[![MELPA Stable](https://stable.melpa.org/packages/mood-line-badge.svg)](https://stable.melpa.org/#/mood-line)
+
+Fork by the [mood-line](https://github.com/jessiehildebrandt/mood-line)
+
 
 ## About
 
@@ -25,6 +25,11 @@ package.
 * Flymake support
 
 * Lightweight with no dependencies
+
+* Nyan and Parrot support
+
+* Change the order of element
+
 
 ## Preview
 
