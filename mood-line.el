@@ -77,7 +77,7 @@
   :group 'mood-line
   :type '(group symbol))
 
-(defcustom mood-line-right-align '(encoding vc major-mode misc-info flycheck flymake process)
+(defcustom mood-line-right-align '(encoding vc major-mode flycheck flymake process misc-info)
   "The order of the modeline element, on the right."
   :group 'mood-line
   :type '(group symbol))
@@ -267,14 +267,14 @@ aligned respectively."
                            (let ((sum (+ (or .error 0) (or .warning 0))))
                              (propertize (concat "⚑ Issues: "
                                                  (number-to-string sum)
-                                                 "  ")
+                                                 " ")
                                          'face (if .error
                                                    'mood-line-status-error
                                                  'mood-line-status-warning))))
-                       (propertize "✔ Good  " 'face 'mood-line-status-success)))
-          ('running (propertize "Δ Checking  " 'face 'mood-line-status-info))
-          ('errored (propertize "✖ Error  " 'face 'mood-line-status-error))
-          ('interrupted (propertize "⏸ Paused  " 'face 'mood-line-status-neutral))
+                       (propertize "✔ Good " 'face 'mood-line-status-success)))
+          ('running (propertize "Δ Checking " 'face 'mood-line-status-info))
+          ('errored (propertize "✖ Error " 'face 'mood-line-status-error))
+          ('interrupted (propertize "⏸ Paused " 'face 'mood-line-status-neutral))
           ('no-checker ""))))
 
 ;;
@@ -369,7 +369,7 @@ aligned respectively."
   "Displays the current value of `mode-line-misc-info' in the mode-line."
   (let ((misc-info (format-mode-line mode-line-misc-info 'mood-line-unimportant)))
     (unless (string= (mood-line--string-trim misc-info) "")
-      (concat (mood-line--string-trim misc-info) "  "))))
+      (concat " [" (mood-line--string-trim misc-info) "] "))))
 
 
 (defun mood-line-segment-flycheck ()
@@ -378,7 +378,8 @@ aligned respectively."
 
 
 (defun mood-line-segment-flymake ()
-  "Displays information about the current status of flymake in the mode-line (if available)."
+  "Displays information about the current status of flymake in the mode-line
+(if available)."
   (when (and (boundp 'flymake-mode) flymake-mode)
     ;; Depending on Emacs version, flymake stores the mode-line segment using one of two variable names
     (let ((flymake-segment-format (if (boundp 'flymake-mode-line-format)
