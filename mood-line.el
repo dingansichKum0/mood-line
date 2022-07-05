@@ -211,7 +211,7 @@ aligned respectively."
                         :background (or mood-line-inactive-background (face-attribute 'mode-line-inactive :background)))
     
     (concat
-     (propertize " " 'display '(raise -0.4))
+     (propertize " " 'display '(raise -0.6))
      left
      (propertize " " 'display '(height 1.6))
      (propertize " "
