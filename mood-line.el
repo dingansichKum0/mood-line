@@ -318,13 +318,13 @@ aligned respectively."
 (defun mood-line-widget-nyan ()
   "Displays nyan-mode in the mode-line."
   (if (and (mood-line--active) (bound-and-true-p nyan-mode)) 
-      '(:eval (nyan-create))))
+      '(" " (:eval (nyan-create)) " ")))
 
 
 (defun mood-line-widget-parrot ()
   "Displays parrot-mode in the mode-line."
-  (if (and (mood-line--active) (bound-and-true-p parrot-mode)) 
-      '(:eval (parrot-create))))
+  (if (and (mood-line--active) (bound-and-true-p parrot-mode))
+      '(" " (:eval (parrot-create)) " ")))
 
 
 (defun mood-line-segment-cursor-position ()
