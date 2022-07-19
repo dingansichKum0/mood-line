@@ -367,9 +367,10 @@ aligned respectively."
 
 (defun mood-line-segment-misc-info ()
   "Displays the current value of `mode-line-misc-info' in the mode-line."
-  (let ((misc-info (format-mode-line mode-line-misc-info 'mood-line-unimportant)))
-    (unless (string= (mood-line--string-trim misc-info) "")
-      (concat " [" (mood-line--string-trim misc-info) "] "))))
+  (let ((misc-info (mood-line--string-trim (format-mode-line mode-line-misc-info 'mood-line-unimportant))))
+    (if (and (not (string-empty-p misc-info)) (mood-line--active))
+        ;; (concat " [" misc-info "] ")
+        '(" [" mode-line-misc-info "] "))))
 
 
 (defun mood-line-segment-flycheck ()
