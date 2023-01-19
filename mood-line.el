@@ -72,7 +72,7 @@
   "A minimal mode-line configuration inspired by doom-modeline."
   :group 'mode-line)
 
-(defcustom mood-line-left-align '(modified buffer-name anzu multiple-cursors nyan line-position parrot)
+(defcustom mood-line-left-align '(modified buffer-name anzu multiple-cursors nyan line-position parrot theme)
   "The order of the modeline element, on the left."
   :group 'mood-line
   :type '(group symbol))
@@ -139,7 +139,12 @@
 
 (defface mood-line-modified
   '((t (:inherit (error))))
-  "Face used for the 'modified' indicator symbol in the mode-line."
+  "Face used for the `modified' indicator symbol in the mode-line."
+  :group 'mood-line)
+
+(defface mood-line-theme
+  '((t (:inherit (shadow))))
+  "Face used for theme name indicator in the mode-line."
   :group 'mood-line)
 
 ;;
@@ -200,8 +205,7 @@ If FRAME is nil, it means the current frame."
 
 
 (defun mood-line--format (left right)
-  "Return a string of `window-width' length containing LEFT and RIGHT,
-aligned respectively."
+  "Return a string of `window-width' length containing LEFT and RIGHT, aligned respectively."
   (let ((reserve (length right)))
     (set-face-attribute 'mode-line nil
                         :family  (or mood-line-font (face-attribute 'mode-line :family))
@@ -213,14 +217,14 @@ aligned respectively."
     (concat
      (propertize " " 'display '(raise -0.6))
      left
-     (propertize " " 'display '(height 1.6))
+     (propertize " " 'display '(height 1.8))
      (propertize " "
                  'display `((space :align-to (- right (- 0 right-margin) ,reserve))))
      right)))
 
 
 (defun mood-line--make-render-list (list map)
-  "Make render list by LIST and MAPS."
+  "Make render list by LIST and MAP."
   (mapcar (lambda (it)
             `(:eval (,(cdr (assoc it map))))) list))
 
@@ -317,7 +321,7 @@ aligned respectively."
 
 (defun mood-line-widget-nyan ()
   "Displays nyan-mode in the mode-line."
-  (if (and (mood-line--active) (bound-and-true-p nyan-mode)) 
+  (if (and (mood-line--active) (bound-and-true-p nyan-mode))
       '(" " (:eval (nyan-create)) " ")))
 
 
@@ -325,6 +329,12 @@ aligned respectively."
   "Displays parrot-mode in the mode-line."
   (if (and (mood-line--active) (bound-and-true-p parrot-mode))
       '(" " (:eval (parrot-create)) " ")))
+
+
+(defun mood-line-widget-theme ()
+  "Displays current theme name."
+  (if (functionp 'lacquer-current-theme-name)
+      (propertize (lacquer-current-theme-name) 'face 'mood-line-theme)))
 
 
 (defun mood-line-segment-cursor-position ()
@@ -413,6 +423,7 @@ aligned respectively."
                                          (line-position . mood-line-segment-line-position)
                                          (cursor-position . mood-line-segment-cursor-position)
                                          (parrot . mood-line-widget-parrot)
+                                         (theme . mood-line-widget-theme)
                                          (eol . mood-line-segment-eol)
                                          (encoding . mood-line-segment-encoding)
                                          (vc . mood-line-segment-vc)
