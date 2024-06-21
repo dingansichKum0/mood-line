@@ -72,7 +72,7 @@
   "A minimal mode-line configuration inspired by doom-modeline."
   :group 'mode-line)
 
-(defcustom mood-line-left-align '(modified buffer-name anzu multiple-cursors nyan line-position parrot theme)
+(defcustom mood-line-left-align '(modified workspace buffer-name anzu multiple-cursors nyan line-position parrot theme)
   "The order of the modeline element, on the left."
   :group 'mood-line
   :type '(group symbol))
@@ -147,6 +147,11 @@
   "Face used for theme name indicator in the mode-line."
   :group 'mood-line)
 
+(defface mood-line-workspace
+  '((t (:inherit (shadow))))
+  "Face used for workspace name indicator in the mode-line."
+  :group 'mood-line)
+
 ;;
 ;; Helper functions
 ;;
@@ -208,12 +213,16 @@ If FRAME is nil, it means the current frame."
   "Return a string of `window-width' length containing LEFT and RIGHT, aligned respectively."
   (let ((reserve (length right)))
     (set-face-attribute 'mode-line nil
+                        :box nil
+                        :overline nil :underline nil
                         :family  (or mood-line-font (face-attribute 'mode-line :family))
                         :background (or mood-line-background (face-attribute 'mode-line :background)))
     (set-face-attribute 'mode-line-inactive nil
+                        :box nil
+                        :overline nil :underline nil
                         :family (or mood-line-font (face-attribute 'mode-line-inactive :family))
                         :background (or mood-line-inactive-background (face-attribute 'mode-line-inactive :background)))
-    
+
     (concat
      (propertize " " 'display '(raise -0.6))
      left
@@ -337,6 +346,29 @@ If FRAME is nil, it means the current frame."
       (propertize (lacquer-current-theme-name) 'face 'mood-line-theme)))
 
 
+(defun mood-line-widget-workspace ()
+  "Displays current workspace name."
+  (when-let
+      ((name (cond
+              ((and (bound-and-true-p eyebrowse-mode)
+                    (length> (eyebrowse--get 'window-configs) 1))
+               (setq mode-line-misc-info
+                     (assq-delete-all 'eyebrowse-mode mode-line-misc-info))
+               (when-let*
+                   ((num (eyebrowse--get 'current-slot))
+                    (tag (nth 2 (assoc num (eyebrowse--get 'window-configs)))))
+                 (if (length> tag 0) tag (int-to-string num))))
+              ((and (fboundp 'tab-bar-mode)
+                    (length> (frame-parameter nil 'tabs) 1))
+               (let* ((current-tab (tab-bar--current-tab))
+                      (tab-index (tab-bar--current-tab-index))
+                      (explicit-name (alist-get 'explicit-name current-tab))
+                      (tab-name (alist-get 'name current-tab)))
+                 (if explicit-name tab-name (+ 1 tab-index)))))))
+    (propertize (format " %s " name)
+                'face 'mood-line-workspace)))
+
+
 (defun mood-line-segment-cursor-position ()
   "Displays the current cursor position in the mode-line."
   (concat "%l:%c"
@@ -424,6 +456,7 @@ If FRAME is nil, it means the current frame."
                                          (cursor-position . mood-line-segment-cursor-position)
                                          (parrot . mood-line-widget-parrot)
                                          (theme . mood-line-widget-theme)
+                                         (workspace . mood-line-widget-workspace)
                                          (eol . mood-line-segment-eol)
                                          (encoding . mood-line-segment-encoding)
                                          (vc . mood-line-segment-vc)
@@ -488,7 +521,7 @@ If FRAME is nil, it means the current frame."
                            ;;   (:eval (mood-line-segment-process))
                            ;;   " ")
                            (mood-line--make-render-list mood-line-right-align mood-line--segment-render-maps)))))))
-    
+
     (progn
       ;; Remove flycheck hooks
       (remove-hook 'flycheck-status-changed-functions #'mood-line--update-flycheck-segment)
